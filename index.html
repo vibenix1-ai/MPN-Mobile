@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SWF Game - Final Round Q/E</title>
+
+    <style>
+        /* Подключаем твой кастомный шрифт из файла */
+        @font-face {
+            font-family: 'MyCustomFont';
+            src: url('custom_font.ttf') format('truetype'); /* Положи файл custom_font.ttf рядом */
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* Применяем шрифт и оптимизацию ко всему */
+        * { 
+            box-sizing: border-box; 
+            touch-action: none; 
+            user-select: none; 
+            -webkit-touch-callout: none; 
+            font-family: 'MyCustomFont', sans-serif !important;
+        }
+
+        html, body {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background: #000; overflow: hidden;
+            position: fixed;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        #player-container {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh; z-index: 1;
+            overflow: hidden;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        ruffle-player { 
+            width: 100% !important; 
+            height: 100% !important; 
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh; z-index: 10;
+            pointer-events: none;
+            will-change: transform;
+            transform: translateZ(0);
+        }
+
+        /* Текстура для обычных кнопок (Q, E, SPACE) */
+        .btn-texture {
+            background: url('btn_texture.png') center/cover no-repeat;
+            border: 2px solid rgba(255, 0, 0, 0.85);
+            box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+
+        /* Уникальная текстура для заднего фона счётчика FPS */
+        .fps-texture {
+            background: url('fps_texture.png') center/cover no-repeat;
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+
+        .glass-btn {
+            position: absolute;
+            color: rgba(255, 200, 200, 0.95);
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%; /* Сделали круглыми */
+            pointer-events: auto;
+            transform: translateZ(0);
+        }
+        .glass-btn:active, .glass-btn.active {
+            filter: brightness(1.3);
+            border-color: #ff0000;
+            color: #fff;
+        }
+
+        /* Q и E теперь круглые и аккуратно расположены над левым джойстиком */
+        #q-btn {
+            position: absolute;
+            bottom: 160px; left: 25px;
+            width: 48px; height: 48px;
+        }
+        #e-btn {
+            position: absolute;
+            bottom: 160px; left: 111px;
+            width: 48px; height: 48px;
+        }
+
+        /* Левый джойстик (большая база со своей текстурой) */
+        #joystick-left {
+            position: absolute;
+            bottom: 20px; left: 25px;
+            width: 134px; height: 134px;
+            background: url('joystick_base.png') center/cover no-repeat;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 0, 0, 0.85);
+            pointer-events: auto;
+            transform: translateZ(0);
+        }
+
+        /* Центральный стик (маленькая часть со своей текстурой) */
+        #stick-left-handle {
+            position: absolute;
+            top: 41px; left: 41px;
+            width: 52px; height: 52px;
+            background: url('joystick_handle.png') center/cover no-repeat;
+            border: 2px solid #ff0000;
+            border-radius: 50%;
+            pointer-events: none;
+            will-change: transform;
+            transform: translateZ(0);
+        }
+
+        /* Кнопка SPACE — размером с левый джойстик (134px) */
+        #btn-space {
+            position: absolute;
+            bottom: 20px; right: 25px;
+            width: 134px; height: 134px;
+            font-size: 16px;
+            letter-spacing: 2px;
+            border-radius: 50%;
+        }
+
+        /* Счётчик FPS */
+        #fps-counter {
+            position: absolute;
+            top: 10px; left: 10px;
+            color: rgba(255, 200, 200, 0.95);
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 20;
+            pointer-events: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transform: translateZ(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="player-container"></div>
+    <div id="fps-counter" class="fps-texture">60 FPS</div>
+
+    <div id="ui-layer">
+        <!-- Q и E (круглые) -->
+        <div class="glass-btn btn-texture" id="q-btn">Q</div>
+        <div class="glass-btn btn-texture" id="e-btn">E</div>
+
+        <!-- Левый джойстик (WASD) со своими текстурами -->
+        <div id="joystick-left">
+            <div id="stick-left-handle"></div>
+        </div>
+
+        <!-- SPACE Кнопка -->
+        <div class="glass-btn btn-texture" id="btn-space">SPACE</div>
+    </div>
+
+    <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            window.RufflePlayer = window.RufflePlayer || {};
+            window.RufflePlayer.config = {
+                scale: "showAll",
+                letterbox: "off",
+                autoplay: "on",
+                unmuteOverlay: "hidden",
+                backgroundColor: "#000000"
+            };
+
+            const player = window.RufflePlayer.newest().createPlayer();
+            document.getElementById("player-container").appendChild(player);
+            player.load("game.swf");
+
+            // --- СУПЕРОПТИМИЗИРОВАННЫЙ FPS СЧЕТЧИК ---
+            let frameCount = 0;
+            let lastTime = performance.now();
+            const fpsEl = document.getElementById('fps-counter');
+            
+            function updateFPS(currentTime) {
+                frameCount++;
+                if (currentTime - lastTime >= 1000) {
+                    fpsEl.innerText = `${frameCount} FPS`;
+                    frameCount = 0;
+                    lastTime = currentTime;
+                }
+                requestAnimationFrame(updateFPS);
+            }
+            requestAnimationFrame(updateFPS);
+
+            // --- УПРАВЛЕНИЕ КЛАВИАТУРОЙ ---
+            const activeKeys = {};
+            function sendKey(key, type) {
+                const keyCodeMap = { 'w': 87, 'a': 65, 's': 83, 'd': 68, 'q': 81, 'e': 69, ' ': 32 };
+                const code = keyCodeMap[key.toLowerCase()] || 0;
+                
+                const event = new KeyboardEvent(type, {
+                    key: key,
+                    code: key === ' ' ? 'Space' : 'Key' + key.toUpperCase(),
+                    keyCode: code, which: code,
+                    bubbles: true, cancelable: true
+                });
+                player.dispatchEvent(event);
+            }
+
+            function setKeyState(key, isDown) {
+                if (isDown && !activeKeys[key]) {
+                    activeKeys[key] = true;
+                    sendKey(key, 'keydown');
+                } else if (!isDown && activeKeys[key]) {
+                    activeKeys[key] = false;
+                    sendKey(key, 'keyup');
+                }
+            }
+
+            function bindGlassButton(elId, key) {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); setKeyState(key, true); el.classList.add('active'); }, {passive: false});
+                el.addEventListener('touchend', (e) => { e.preventDefault(); setKeyState(key, false); el.classList.remove('active'); }, {passive: false});
+            }
+            bindGlassButton('q-btn', 'q');
+            bindGlassButton('e-btn', 'e');
+            bindGlassButton('btn-space', ' ');
+
+            // --- ЛЕВЫЙ ДЖОЙСТИК (WASD) ---
+            const jLeft = document.getElementById('joystick-left');
+            const hLeft = document.getElementById('stick-left-handle');
+            let lTouchId = null;
+            const lCenter = { x: 67, y: 67 };
+            const lMaxDist = 42;
+
+            jLeft.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                lTouchId = e.changedTouches[0].identifier;
+            }, {passive: false});
+
+            window.addEventListener('touchmove', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === lTouchId) {
+                        const rect = jLeft.getBoundingClientRect();
+                        const x = touch.clientX - rect.left - lCenter.x;
+                        const y = touch.clientY - rect.top - lCenter.y;
+                        const dist = Math.sqrt(x * x + y * y);
+                        
+                        let angle = Math.atan2(y, x);
+                        let moveDist = Math.min(dist, lMaxDist);
+                        
+                        let hX = Math.cos(angle) * moveDist;
+                        let hY = Math.sin(angle) * moveDist;
+                        
+                        hLeft.style.transform = `translate3d(${hX}px, ${hY}px, 0)`;
+
+                        setKeyState('w', hY < -10);
+                        setKeyState('s', hY > 10);
+                        setKeyState('a', hX < -10);
+                        setKeyState('d', hX > 10);
+                    }
+                }
+            }, {passive: true});
+
+            window.addEventListener('touchend', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === lTouchId) {
+                        lTouchId = null;
+                        hLeft.style.transform = `translate3d(0px, 0px, 0)`;
+                        setKeyState('w', false);
+                        setKeyState('s', false);
+                        setKeyState('a', false);
+                        setKeyState('d', false);
+                    }
+                }
+            }, {passive: true});
+        });
+    </script>
+</body>
+</html>
+
