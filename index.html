@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SWF Game - Final No Context Menu</title>
+    <title>SWF Game - Unified Red Textures</title>
 
     <style>
-        /* Подключаем твой кастомный шрифт из файла */
+        /* Подключаем кастомный шрифт из файла */
         @font-face {
             font-family: 'MyCustomFont';
             src: url('custom_font.ttf') format('truetype');
@@ -54,11 +54,11 @@
             transform: translateZ(0);
         }
 
-        /* Текстура для обычных кнопок (Q, E, SPACE) */
+        /* Единая текстура для всех кнопок и элементов управления */
         .btn-texture {
             background: url('btn_texture.png') center/cover no-repeat;
             border: 2px solid rgba(255, 0, 0, 0.85);
-            box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.3);
+            box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.3), 0 0 10px rgba(0, 0, 0, 0.5);
         }
 
         /* Уникальная текстура для заднего фона счётчика FPS */
@@ -98,24 +98,21 @@
             width: 48px; height: 48px;
         }
 
-        /* Левый джойстик */
+        /* Левый джойстик (теперь с текстурой btn_texture.png) */
         #joystick-left {
             position: absolute;
             bottom: 20px; left: 25px;
             width: 134px; height: 134px;
-            background: url('joystick_base.png') center/cover no-repeat;
             border-radius: 50%;
-            border: 2px solid rgba(255, 0, 0, 0.85);
             pointer-events: auto;
             transform: translateZ(0);
         }
 
+        /* Центральный стик джойстика (теперь тоже с текстурой btn_texture.png) */
         #stick-left-handle {
             position: absolute;
             top: 41px; left: 41px;
             width: 52px; height: 52px;
-            background: url('joystick_handle.png') center/cover no-repeat;
-            border: 2px solid #ff0000;
             border-radius: 50%;
             pointer-events: none;
             will-change: transform;
@@ -156,16 +153,18 @@
         <div class="glass-btn btn-texture" id="q-btn">Q</div>
         <div class="glass-btn btn-texture" id="e-btn">E</div>
 
-        <div id="joystick-left">
-            <div id="stick-left-handle"></div>
+        <!-- Левый джойстик с единой текстурой -->
+        <div id="joystick-left" class="btn-texture">
+            <div id="stick-left-handle" class="btn-texture"></div>
         </div>
 
+        <!-- SPACE Кнопка -->
         <div class="glass-btn btn-texture" id="btn-space">SPACE</div>
     </div>
 
     <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
     <script>
-        // Жесткая блокировка вызова контекстного меню на всей странице
+        // Жесткая блокировка контекстного меню
         window.addEventListener('contextmenu', (e) => e.preventDefault(), { capture: true });
         window.addEventListener('auxclick', (e) => e.preventDefault(), { capture: true });
 
@@ -183,7 +182,6 @@
             document.getElementById("player-container").appendChild(player);
             player.load("game.swf");
 
-            // Дополнительная блокировка меню внутри самого Ruffle-плеера после его загрузки
             setTimeout(() => {
                 const ruffleShadow = player.shadowRoot;
                 if (ruffleShadow) {
@@ -191,7 +189,7 @@
                 }
             }, 1000);
 
-            // --- СУПЕРОПТИМИЗИРОВАННЫЙ FPS СЧЕТЧИК ---
+            // --- FPS СЧЕТЧИК ---
             let frameCount = 0;
             let lastTime = performance.now();
             const fpsEl = document.getElementById('fps-counter');
@@ -295,4 +293,3 @@
     </script>
 </body>
 </html>
-
